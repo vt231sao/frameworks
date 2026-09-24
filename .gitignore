@@ -1,0 +1,24 @@
+# --- JetBrains IDEs (PyCharm, WebStorm, IntelliJ IDEA) ---
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# --- Python (тимчасові файли та віртуальні оточення) ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+.env
+
+# --- Операційні системи (службові файли) ---
+.DS_Store
+Thumbs.db
+
+# --- Локальні конфігурації та секрети ---
+.env.local
+.env.*.local
