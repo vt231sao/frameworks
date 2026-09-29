@@ -10,6 +10,9 @@ class ProductController extends Controller
 {
     private array $products = [
         ['id' => '1', 'name' => 'Laptop', 'price' => 1500],
+        ['id' => '2', 'name' => 'Mouse', 'price' => 50],
+        ['id' => '3', 'name' => 'Headphones', 'price' => 500],
+        ['id' => '4', 'name' => 'Mouse', 'price' => 100],
     ];
 
     private function getProductItemById(string $id): ?array
@@ -46,21 +49,60 @@ class ProductController extends Controller
             'price' => $requestData['price'] ?? 0,
         ];
 
-        // TODO: insert to db
+        $this->products[] = $newProduct;
 
         return response()->json(['data' => $newProduct], Response::HTTP_CREATED);
     }
 
     public function updateProduct(Request $request, string $id): JsonResponse
     {
+        $productIndex = null;
+        foreach ($this->products as $index => $product) {
+            if ($product['id'] === $id) {
+                $productIndex = $index;
+                break;
+            }
+        }
+
+        if ($productIndex === null) {
+            return response()->json(['message' => 'Product not found'], Response::HTTP_NOT_FOUND);
+        }
+
         $requestData = json_decode($request->getContent(), true);
-        // TODO: update in db
-        return response()->json(['message' => "Product $id updated", 'data' => $requestData], Response::HTTP_OK);
+
+        if (isset($requestData['name'])) {
+            $this->products[$productIndex]['name'] = $requestData['name'];
+        }
+        if (isset($requestData['price'])) {
+            $this->products[$productIndex]['price'] = $requestData['price'];
+        }
+
+        return response()->json([
+            'message' => "Product $id updated",
+            'data' => $this->products[$productIndex]
+        ], Response::HTTP_OK);
     }
 
     public function deleteProduct(string $id): JsonResponse
     {
-        // TODO: delete from db
-        return response()->json(['message' => "Product $id deleted"], Response::HTTP_OK);
+        $productIndex = null;
+        foreach ($this->products as $index => $product) {
+            if ($product['id'] === $id) {
+                $productIndex = $index;
+                break;
+            }
+        }
+
+        if ($productIndex === null) {
+            return response()->json(['message' => 'Product not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        unset($this->products[$productIndex]);
+        $this->products = array_values($this->products);
+
+        return response()->json([
+            'message' => "Product $id deleted",
+            'data' => $this->products
+        ], Response::HTTP_OK);
     }
 }
