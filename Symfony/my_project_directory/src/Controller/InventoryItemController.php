@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Controller;
 
 use App\Entity\InventoryItem;
@@ -9,28 +8,66 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
-#[Route('/api/inventory-items')]
+#[Route('/api/inventory-items', name: 'api_inventory_items_')]
 class InventoryItemController extends AbstractController
 {
-    #[Route('', methods: ['GET'])]
-    public function index(EntityManagerInterface $em): JsonResponse
+    /**
+     * @var EntityManagerInterface
+     */
+    private EntityManagerInterface $entityManager;
+
+    /**
+     * @param EntityManagerInterface $entityManager
+     */
+    public function __construct(EntityManagerInterface $entityManager)
     {
-        $items = $em->getRepository(InventoryItem::class)->findAll();
-        return $this->json($items);
+        $this->entityManager = $entityManager;
     }
 
-    #[Route('', methods: ['POST'])]
-    public function store(Request $request, EntityManagerInterface $em): JsonResponse
+    /**
+     * @return JsonResponse
+     */
+    #[Route('', name: 'index', methods: ['GET'])]
+    public function index(): JsonResponse
+    {
+        $items = $this->entityManager->getRepository(InventoryItem::class)->findAll();
+        return $this->json($items, Response::HTTP_OK);
+    }
+
+    /**
+     * @param string $id
+     * @return JsonResponse
+     */
+    #[Route('/{id}', name: 'show', methods: ['GET'])]
+    public function show(string $id): JsonResponse
+    {
+        /** @var InventoryItem $item */
+        $item = $this->entityManager->getRepository(InventoryItem::class)->findOneBy(['id' => $id]);
+
+        if (empty($item)) {
+            return $this->json(['message' => 'Item not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->json($item, Response::HTTP_OK);
+    }
+
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     */
+    #[Route('', name: 'store', methods: ['POST'])]
+    public function store(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
 
-        $category = $em->getRepository(Category::class)->find($data['category_id']);
-        $supplier = $em->getRepository(Supplier::class)->find($data['supplier_id']);
+        $category = $this->entityManager->getRepository(Category::class)->findOneBy(['id' => $data['category_id']]);
+        $supplier = $this->entityManager->getRepository(Supplier::class)->findOneBy(['id' => $data['supplier_id']]);
 
-        if (!$category || !$supplier) {
-            return $this->json(['message' => 'Категорія або постачальник не знайдені'], 400);
+        if (empty($category) || empty($supplier)) {
+            return $this->json(['message' => 'Category or Supplier not found'], Response::HTTP_NOT_FOUND);
         }
 
         $item = new InventoryItem();
@@ -40,54 +77,72 @@ class InventoryItemController extends AbstractController
         $item->setCategory($category);
         $item->setSupplier($supplier);
 
-        $em->persist($item);
-        $em->flush();
+        $this->entityManager->persist($item);
+        $this->entityManager->flush();
 
-        return $this->json($item, 201);
+        return $this->json($item, Response::HTTP_CREATED);
     }
 
-    #[Route('/{id}', methods: ['GET'])]
-    public function show(int $id, EntityManagerInterface $em): JsonResponse
+    /**
+     * @param string $id
+     * @param Request $request
+     * @return JsonResponse
+     */
+    #[Route('/{id}', name: 'update', methods: ['PUT'])]
+    public function update(string $id, Request $request): JsonResponse
     {
-        $item = $em->getRepository(InventoryItem::class)->find($id);
-        if (!$item) return $this->json(['message' => 'Не знайдено'], 404);
-        return $this->json($item);
-    }
+        /** @var InventoryItem $item */
+        $item = $this->entityManager->getRepository(InventoryItem::class)->findOneBy(['id' => $id]);
 
-    #[Route('/{id}', methods: ['PUT'])]
-    public function update(int $id, Request $request, EntityManagerInterface $em): JsonResponse
-    {
-        $item = $em->getRepository(InventoryItem::class)->find($id);
-        if (!$item) return $this->json(['message' => 'Не знайдено'], 404);
+        if (empty($item)) {
+            return $this->json(['message' => 'Item not found'], Response::HTTP_NOT_FOUND);
+        }
 
         $data = json_decode($request->getContent(), true);
 
-        if (isset($data['name'])) $item->setName($data['name']);
-        if (isset($data['price'])) $item->setPrice($data['price']);
-        if (isset($data['stock_quantity'])) $item->setStockQuantity($data['stock_quantity']);
+        if (isset($data['name'])) {
+            $item->setName($data['name']);
+        }
+        if (isset($data['price'])) {
+            $item->setPrice($data['price']);
+        }
+        if (isset($data['stock_quantity'])) {
+            $item->setStockQuantity($data['stock_quantity']);
+        }
 
         if (isset($data['category_id'])) {
-            $category = $em->getRepository(Category::class)->find($data['category_id']);
-            if ($category) $item->setCategory($category);
+            $category = $this->entityManager->getRepository(Category::class)->findOneBy(['id' => $data['category_id']]);
+            if (!empty($category)) {
+                $item->setCategory($category);
+            }
         }
-
         if (isset($data['supplier_id'])) {
-            $supplier = $em->getRepository(Supplier::class)->find($data['supplier_id']);
-            if ($supplier) $item->setSupplier($supplier);
+            $supplier = $this->entityManager->getRepository(Supplier::class)->findOneBy(['id' => $data['supplier_id']]);
+            if (!empty($supplier)) {
+                $item->setSupplier($supplier);
+            }
         }
 
-        $em->flush();
-        return $this->json($item);
+        $this->entityManager->flush();
+        return $this->json($item, Response::HTTP_OK);
     }
 
-    #[Route('/{id}', methods: ['DELETE'])]
-    public function destroy(int $id, EntityManagerInterface $em): JsonResponse
+    /**
+     * @param string $id
+     * @return JsonResponse
+     */
+    #[Route('/{id}', name: 'destroy', methods: ['DELETE'])]
+    public function destroy(string $id): JsonResponse
     {
-        $item = $em->getRepository(InventoryItem::class)->find($id);
-        if (!$item) return $this->json(['message' => 'Не знайдено'], 404);
+        /** @var InventoryItem $item */
+        $item = $this->entityManager->getRepository(InventoryItem::class)->findOneBy(['id' => $id]);
 
-        $em->remove($item);
-        $em->flush();
-        return $this->json(['message' => 'Товар видалено']);
+        if (empty($item)) {
+            return $this->json(['message' => 'Item not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $this->entityManager->remove($item);
+        $this->entityManager->flush();
+        return $this->json([], Response::HTTP_NOT_FOUND);
     }
 }

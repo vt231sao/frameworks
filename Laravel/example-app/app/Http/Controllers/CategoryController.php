@@ -1,45 +1,90 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Category;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class CategoryController extends Controller
 {
-    public function index()
+    /**
+     * @return JsonResponse
+     */
+    public function index(): JsonResponse
     {
-        return response()->json(Category::all(), 200);
+        $categories = Category::all();
+        return response()->json($categories, Response::HTTP_OK);
     }
 
-    public function store(Request $request)
+    /**
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function show(string $id): JsonResponse
     {
-        $category = Category::create([
-            'name' => $request->name,
-            'description' => $request->description,
-        ]);
-
-        return response()->json($category, 201);
+        $category = Category::find($id);
+        if (empty($category)) {
+            return response()->json(['message' => 'Category not found'], Response::HTTP_NOT_FOUND);
+        }
+        return response()->json($category, Response::HTTP_OK);
     }
 
-    public function show(Category $category)
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function store(Request $request): JsonResponse
     {
-        return response()->json($category, 200);
+        $data = json_decode($request->getContent(), true);
+
+        $category = DB::transaction(function () use ($data) {
+            $category = new Category();
+            $category->fill($data);
+            $category->save();
+            return $category;
+        });
+
+        return new JsonResponse($category, Response::HTTP_CREATED);
     }
 
-    public function update(Request $request, Category $category)
+    /**
+     * @param Request $request
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function update(Request $request, string $id): JsonResponse
     {
-        $category->update([
-            'name' => $request->name ?? $category->name,
-            'description' => $request->description ?? $category->description,
-        ]);
+        $category = Category::find($id);
+        if (empty($category)) {
+            return response()->json(['message' => 'Category not found'], Response::HTTP_NOT_FOUND);
+        }
 
-        return response()->json($category, 200);
+        $data = json_decode($request->getContent(), true);
+
+        if (isset($data['name'])) {
+            $category->name = $data['name'];
+        }
+        if (isset($data['description'])) {
+            $category->description = $data['description'];
+        }
+        $category->save();
+
+        return new JsonResponse($category, Response::HTTP_OK);
     }
 
-    public function destroy(Category $category)
+    /**
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function destroy(string $id): JsonResponse
     {
+        $category = Category::find($id);
+        if (empty($category)) {
+            return response()->json(['message' => 'Category not found'], Response::HTTP_NOT_FOUND);
+        }
         $category->delete();
-        return response()->json(['message' => 'Категорію видалено'], 200);
+        return new JsonResponse([], Response::HTTP_NOT_FOUND);
     }
 }

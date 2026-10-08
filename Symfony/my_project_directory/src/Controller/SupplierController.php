@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Controller;
 
 use App\Entity\Supplier;
@@ -7,20 +6,58 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
-#[Route('/api/suppliers')]
+#[Route('/api/suppliers', name: 'api_suppliers_')]
 class SupplierController extends AbstractController
 {
-    #[Route('', methods: ['GET'])]
-    public function index(EntityManagerInterface $em): JsonResponse
+    /**
+     * @var EntityManagerInterface
+     */
+    private EntityManagerInterface $entityManager;
+
+    /**
+     * @param EntityManagerInterface $entityManager
+     */
+    public function __construct(EntityManagerInterface $entityManager)
     {
-        $suppliers = $em->getRepository(Supplier::class)->findAll();
-        return $this->json($suppliers);
+        $this->entityManager = $entityManager;
     }
 
-    #[Route('', methods: ['POST'])]
-    public function store(Request $request, EntityManagerInterface $em): JsonResponse
+    /**
+     * @return JsonResponse
+     */
+    #[Route('', name: 'index', methods: ['GET'])]
+    public function index(): JsonResponse
+    {
+        $suppliers = $this->entityManager->getRepository(Supplier::class)->findAll();
+        return $this->json($suppliers, Response::HTTP_OK);
+    }
+
+    /**
+     * @param string $id
+     * @return JsonResponse
+     */
+    #[Route('/{id}', name: 'show', methods: ['GET'])]
+    public function show(string $id): JsonResponse
+    {
+        /** @var Supplier $supplier */
+        $supplier = $this->entityManager->getRepository(Supplier::class)->findOneBy(['id' => $id]);
+
+        if (empty($supplier)) {
+            return $this->json(['message' => 'Supplier not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->json($supplier, Response::HTTP_OK);
+    }
+
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     */
+    #[Route('', name: 'store', methods: ['POST'])]
+    public function store(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
 
@@ -31,43 +68,59 @@ class SupplierController extends AbstractController
             $supplier->setPhone($data['phone']);
         }
 
-        $em->persist($supplier);
-        $em->flush();
+        $this->entityManager->persist($supplier);
+        $this->entityManager->flush();
 
-        return $this->json($supplier, 201);
+        return $this->json($supplier, Response::HTTP_CREATED);
     }
 
-    #[Route('/{id}', methods: ['GET'])]
-    public function show(int $id, EntityManagerInterface $em): JsonResponse
+    /**
+     * @param string $id
+     * @param Request $request
+     * @return JsonResponse
+     */
+    #[Route('/{id}', name: 'update', methods: ['PUT'])]
+    public function update(string $id, Request $request): JsonResponse
     {
-        $supplier = $em->getRepository(Supplier::class)->find($id);
-        if (!$supplier) return $this->json(['message' => 'Не знайдено'], 404);
-        return $this->json($supplier);
-    }
+        /** @var Supplier $supplier */
+        $supplier = $this->entityManager->getRepository(Supplier::class)->findOneBy(['id' => $id]);
 
-    #[Route('/{id}', methods: ['PUT'])]
-    public function update(int $id, Request $request, EntityManagerInterface $em): JsonResponse
-    {
-        $supplier = $em->getRepository(Supplier::class)->find($id);
-        if (!$supplier) return $this->json(['message' => 'Не знайдено'], 404);
+        if (empty($supplier)) {
+            return $this->json(['message' => 'Supplier not found'], Response::HTTP_NOT_FOUND);
+        }
 
         $data = json_decode($request->getContent(), true);
-        if (isset($data['name'])) $supplier->setName($data['name']);
-        if (isset($data['contact_email'])) $supplier->setContactEmail($data['contact_email']);
-        if (isset($data['phone'])) $supplier->setPhone($data['phone']);
 
-        $em->flush();
-        return $this->json($supplier);
+        if (isset($data['name'])) {
+            $supplier->setName($data['name']);
+        }
+        if (isset($data['contact_email'])) {
+            $supplier->setContactEmail($data['contact_email']);
+        }
+        if (isset($data['phone'])) {
+            $supplier->setPhone($data['phone']);
+        }
+
+        $this->entityManager->flush();
+        return $this->json($supplier, Response::HTTP_OK);
     }
 
-    #[Route('/{id}', methods: ['DELETE'])]
-    public function destroy(int $id, EntityManagerInterface $em): JsonResponse
+    /**
+     * @param string $id
+     * @return JsonResponse
+     */
+    #[Route('/{id}', name: 'destroy', methods: ['DELETE'])]
+    public function destroy(string $id): JsonResponse
     {
-        $supplier = $em->getRepository(Supplier::class)->find($id);
-        if (!$supplier) return $this->json(['message' => 'Не знайдено'], 404);
+        /** @var Supplier $supplier */
+        $supplier = $this->entityManager->getRepository(Supplier::class)->findOneBy(['id' => $id]);
 
-        $em->remove($supplier);
-        $em->flush();
-        return $this->json(['message' => 'Постачальника видалено']);
+        if (empty($supplier)) {
+            return $this->json(['message' => 'Supplier not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $this->entityManager->remove($supplier);
+        $this->entityManager->flush();
+        return $this->json([], Response::HTTP_NOT_FOUND);
     }
 }

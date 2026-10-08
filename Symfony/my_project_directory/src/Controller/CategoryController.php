@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Controller;
 
 use App\Entity\Category;
@@ -7,20 +6,58 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
-#[Route('/api/categories')]
+#[Route('/api/categories', name: 'api_categories_')]
 class CategoryController extends AbstractController
 {
-    #[Route('', methods: ['GET'])]
-    public function index(EntityManagerInterface $em): JsonResponse
+    /**
+     * @var EntityManagerInterface
+     */
+    private EntityManagerInterface $entityManager;
+
+    /**
+     * @param EntityManagerInterface $entityManager
+     */
+    public function __construct(EntityManagerInterface $entityManager)
     {
-        $categories = $em->getRepository(Category::class)->findAll();
-        return $this->json($categories);
+        $this->entityManager = $entityManager;
     }
 
-    #[Route('', methods: ['POST'])]
-    public function store(Request $request, EntityManagerInterface $em): JsonResponse
+    /**
+     * @return JsonResponse
+     */
+    #[Route('', name: 'index', methods: ['GET'])]
+    public function index(): JsonResponse
+    {
+        $categories = $this->entityManager->getRepository(Category::class)->findAll();
+        return $this->json($categories, Response::HTTP_OK);
+    }
+
+    /**
+     * @param string $id
+     * @return JsonResponse
+     */
+    #[Route('/{id}', name: 'show', methods: ['GET'])]
+    public function show(string $id): JsonResponse
+    {
+        /** @var Category $category */
+        $category = $this->entityManager->getRepository(Category::class)->findOneBy(['id' => $id]);
+
+        if (empty($category)) {
+            return $this->json(['message' => 'Category not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->json($category, Response::HTTP_OK);
+    }
+
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     */
+    #[Route('', name: 'store', methods: ['POST'])]
+    public function store(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
 
@@ -30,42 +67,56 @@ class CategoryController extends AbstractController
             $category->setDescription($data['description']);
         }
 
-        $em->persist($category);
-        $em->flush();
+        $this->entityManager->persist($category);
+        $this->entityManager->flush();
 
-        return $this->json($category, 201);
+        return $this->json($category, Response::HTTP_CREATED);
     }
 
-    #[Route('/{id}', methods: ['GET'])]
-    public function show(int $id, EntityManagerInterface $em): JsonResponse
+    /**
+     * @param string $id
+     * @param Request $request
+     * @return JsonResponse
+     */
+    #[Route('/{id}', name: 'update', methods: ['PUT'])]
+    public function update(string $id, Request $request): JsonResponse
     {
-        $category = $em->getRepository(Category::class)->find($id);
-        if (!$category) return $this->json(['message' => 'Не знайдено'], 404);
-        return $this->json($category);
-    }
+        /** @var Category $category */
+        $category = $this->entityManager->getRepository(Category::class)->findOneBy(['id' => $id]);
 
-    #[Route('/{id}', methods: ['PUT'])]
-    public function update(int $id, Request $request, EntityManagerInterface $em): JsonResponse
-    {
-        $category = $em->getRepository(Category::class)->find($id);
-        if (!$category) return $this->json(['message' => 'Не знайдено'], 404);
+        if (empty($category)) {
+            return $this->json(['message' => 'Category not found'], Response::HTTP_NOT_FOUND);
+        }
 
         $data = json_decode($request->getContent(), true);
-        if (isset($data['name'])) $category->setName($data['name']);
-        if (isset($data['description'])) $category->setDescription($data['description']);
 
-        $em->flush();
-        return $this->json($category);
+        if (isset($data['name'])) {
+            $category->setName($data['name']);
+        }
+        if (isset($data['description'])) {
+            $category->setDescription($data['description']);
+        }
+
+        $this->entityManager->flush();
+        return $this->json($category, Response::HTTP_OK);
     }
 
-    #[Route('/{id}', methods: ['DELETE'])]
-    public function destroy(int $id, EntityManagerInterface $em): JsonResponse
+    /**
+     * @param string $id
+     * @return JsonResponse
+     */
+    #[Route('/{id}', name: 'destroy', methods: ['DELETE'])]
+    public function destroy(string $id): JsonResponse
     {
-        $category = $em->getRepository(Category::class)->find($id);
-        if (!$category) return $this->json(['message' => 'Не знайдено'], 404);
+        /** @var Category $category */
+        $category = $this->entityManager->getRepository(Category::class)->findOneBy(['id' => $id]);
 
-        $em->remove($category);
-        $em->flush();
-        return $this->json(['message' => 'Категорію видалено']);
+        if (empty($category)) {
+            return $this->json(['message' => 'Category not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $this->entityManager->remove($category);
+        $this->entityManager->flush();
+        return $this->json([], Response::HTTP_NOT_FOUND);
     }
 }

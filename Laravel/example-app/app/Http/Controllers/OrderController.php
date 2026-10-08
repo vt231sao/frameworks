@@ -1,45 +1,93 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\Order;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class OrderController extends Controller
 {
-    public function index()
+    /**
+     * @return JsonResponse
+     */
+    public function index(): JsonResponse
     {
-        return response()->json(Order::all(), 200);
+        $orders = Order::all();
+        return response()->json($orders, Response::HTTP_OK);
     }
 
-    public function store(Request $request)
+    /**
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function show(string $id): JsonResponse
     {
-        $order = Order::create([
-            'customer_name' => $request->customer_name,
-            'status' => $request->status ?? 'pending',
-        ]);
-
-        return response()->json($order, 201);
+        $order = Order::find($id);
+        if (empty($order)) {
+            return response()->json(['message' => 'Order not found'], Response::HTTP_NOT_FOUND);
+        }
+        return response()->json($order, Response::HTTP_OK);
     }
 
-    public function show(Order $order)
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function store(Request $request): JsonResponse
     {
-        return response()->json($order, 200);
+        $data = json_decode($request->getContent(), true);
+
+        $order = DB::transaction(function () use ($data) {
+            $order = new Order();
+            $order->fill($data);
+            if (!isset($data['status'])) {
+                $order->status = 'pending';
+            }
+            $order->save();
+            return $order;
+        });
+
+        return new JsonResponse($order, Response::HTTP_CREATED);
     }
 
-    public function update(Request $request, Order $order)
+    /**
+     * @param Request $request
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function update(Request $request, string $id): JsonResponse
     {
-        $order->update([
-            'customer_name' => $request->customer_name ?? $order->customer_name,
-            'status' => $request->status ?? $order->status,
-        ]);
+        $order = Order::find($id);
+        if (empty($order)) {
+            return response()->json(['message' => 'Order not found'], Response::HTTP_NOT_FOUND);
+        }
 
-        return response()->json($order, 200);
+        $data = json_decode($request->getContent(), true);
+
+        if (isset($data['customer_name'])) {
+            $order->customer_name = $data['customer_name'];
+        }
+        if (isset($data['status'])) {
+            $order->status = $data['status'];
+        }
+        $order->save();
+
+        return new JsonResponse($order, Response::HTTP_OK);
     }
 
-    public function destroy(Order $order)
+    /**
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function destroy(string $id): JsonResponse
     {
+        $order = Order::find($id);
+        if (empty($order)) {
+            return response()->json(['message' => 'Order not found'], Response::HTTP_NOT_FOUND);
+        }
         $order->delete();
-        return response()->json(['message' => 'Замовлення видалено'], 200);
+        return new JsonResponse([], Response::HTTP_NOT_FOUND);
     }
 }

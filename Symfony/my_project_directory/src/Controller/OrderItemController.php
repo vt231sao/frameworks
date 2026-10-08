@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Controller;
 
 use App\Entity\OrderItem;
@@ -9,28 +8,66 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
-#[Route('/api/order-items')]
+#[Route('/api/order-items', name: 'api_order_items_')]
 class OrderItemController extends AbstractController
 {
-    #[Route('', methods: ['GET'])]
-    public function index(EntityManagerInterface $em): JsonResponse
+    /**
+     * @var EntityManagerInterface
+     */
+    private EntityManagerInterface $entityManager;
+
+    /**
+     * @param EntityManagerInterface $entityManager
+     */
+    public function __construct(EntityManagerInterface $entityManager)
     {
-        $orderItems = $em->getRepository(OrderItem::class)->findAll();
-        return $this->json($orderItems);
+        $this->entityManager = $entityManager;
     }
 
-    #[Route('', methods: ['POST'])]
-    public function store(Request $request, EntityManagerInterface $em): JsonResponse
+    /**
+     * @return JsonResponse
+     */
+    #[Route('', name: 'index', methods: ['GET'])]
+    public function index(): JsonResponse
+    {
+        $items = $this->entityManager->getRepository(OrderItem::class)->findAll();
+        return $this->json($items, Response::HTTP_OK);
+    }
+
+    /**
+     * @param string $id
+     * @return JsonResponse
+     */
+    #[Route('/{id}', name: 'show', methods: ['GET'])]
+    public function show(string $id): JsonResponse
+    {
+        /** @var OrderItem $orderItem */
+        $orderItem = $this->entityManager->getRepository(OrderItem::class)->findOneBy(['id' => $id]);
+
+        if (empty($orderItem)) {
+            return $this->json(['message' => 'Order item not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        return $this->json($orderItem, Response::HTTP_OK);
+    }
+
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     */
+    #[Route('', name: 'store', methods: ['POST'])]
+    public function store(Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
 
-        $order = $em->getRepository(WarehouseOrder::class)->find($data['order_id']);
-        $inventoryItem = $em->getRepository(InventoryItem::class)->find($data['inventory_item_id']);
+        $order = $this->entityManager->getRepository(WarehouseOrder::class)->findOneBy(['id' => $data['order_id']]);
+        $inventoryItem = $this->entityManager->getRepository(InventoryItem::class)->findOneBy(['id' => $data['inventory_item_id']]);
 
-        if (!$order || !$inventoryItem) {
-            return $this->json(['message' => 'Замовлення або товар не знайдено'], 400);
+        if (empty($order) || empty($inventoryItem)) {
+            return $this->json(['message' => 'Order or InventoryItem not found'], Response::HTTP_NOT_FOUND);
         }
 
         $orderItem = new OrderItem();
@@ -38,41 +75,53 @@ class OrderItemController extends AbstractController
         $orderItem->setWarehouseOrder($order);
         $orderItem->setInventoryItem($inventoryItem);
 
-        $em->persist($orderItem);
-        $em->flush();
+        $this->entityManager->persist($orderItem);
+        $this->entityManager->flush();
 
-        return $this->json($orderItem, 201);
+        return $this->json($orderItem, Response::HTTP_CREATED);
     }
 
-    #[Route('/{id}', methods: ['GET'])]
-    public function show(int $id, EntityManagerInterface $em): JsonResponse
+    /**
+     * @param string $id
+     * @param Request $request
+     * @return JsonResponse
+     */
+    #[Route('/{id}', name: 'update', methods: ['PUT'])]
+    public function update(string $id, Request $request): JsonResponse
     {
-        $orderItem = $em->getRepository(OrderItem::class)->find($id);
-        if (!$orderItem) return $this->json(['message' => 'Не знайдено'], 404);
-        return $this->json($orderItem);
-    }
+        /** @var OrderItem $orderItem */
+        $orderItem = $this->entityManager->getRepository(OrderItem::class)->findOneBy(['id' => $id]);
 
-    #[Route('/{id}', methods: ['PUT'])]
-    public function update(int $id, Request $request, EntityManagerInterface $em): JsonResponse
-    {
-        $orderItem = $em->getRepository(OrderItem::class)->find($id);
-        if (!$orderItem) return $this->json(['message' => 'Не знайдено'], 404);
+        if (empty($orderItem)) {
+            return $this->json(['message' => 'Order item not found'], Response::HTTP_NOT_FOUND);
+        }
 
         $data = json_decode($request->getContent(), true);
-        if (isset($data['quantity'])) $orderItem->setQuantity($data['quantity']);
 
-        $em->flush();
-        return $this->json($orderItem);
+        if (isset($data['quantity'])) {
+            $orderItem->setQuantity($data['quantity']);
+        }
+
+        $this->entityManager->flush();
+        return $this->json($orderItem, Response::HTTP_OK);
     }
 
-    #[Route('/{id}', methods: ['DELETE'])]
-    public function destroy(int $id, EntityManagerInterface $em): JsonResponse
+    /**
+     * @param string $id
+     * @return JsonResponse
+     */
+    #[Route('/{id}', name: 'destroy', methods: ['DELETE'])]
+    public function destroy(string $id): JsonResponse
     {
-        $orderItem = $em->getRepository(OrderItem::class)->find($id);
-        if (!$orderItem) return $this->json(['message' => 'Не знайдено'], 404);
+        /** @var OrderItem $orderItem */
+        $orderItem = $this->entityManager->getRepository(OrderItem::class)->findOneBy(['id' => $id]);
 
-        $em->remove($orderItem);
-        $em->flush();
-        return $this->json(['message' => 'Позицію замовлення видалено']);
+        if (empty($orderItem)) {
+            return $this->json(['message' => 'Order item not found'], Response::HTTP_NOT_FOUND);
+        }
+
+        $this->entityManager->remove($orderItem);
+        $this->entityManager->flush();
+        return $this->json([], Response::HTTP_NOT_FOUND);
     }
 }

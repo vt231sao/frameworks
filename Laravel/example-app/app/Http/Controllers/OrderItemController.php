@@ -1,47 +1,93 @@
 <?php
-
 namespace App\Http\Controllers;
 
 use App\Models\OrderItem;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 class OrderItemController extends Controller
 {
-    public function index()
+    /**
+     * @return JsonResponse
+     */
+    public function index(): JsonResponse
     {
-        return response()->json(OrderItem::all(), 200);
+        $items = OrderItem::all();
+        return response()->json($items, Response::HTTP_OK);
     }
 
-    public function store(Request $request)
+    /**
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function show(string $id): JsonResponse
     {
-        $orderItem = OrderItem::create([
-            'order_id' => $request->order_id,
-            'inventory_item_id' => $request->inventory_item_id,
-            'quantity' => $request->quantity,
-        ]);
-
-        return response()->json($orderItem, 201);
+        $item = OrderItem::find($id);
+        if (empty($item)) {
+            return response()->json(['message' => 'Order Item not found'], Response::HTTP_NOT_FOUND);
+        }
+        return response()->json($item, Response::HTTP_OK);
     }
 
-    public function show(OrderItem $orderItem)
+    /**
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function store(Request $request): JsonResponse
     {
-        return response()->json($orderItem, 200);
+        $data = json_decode($request->getContent(), true);
+
+        $orderItem = DB::transaction(function () use ($data) {
+            $orderItem = new OrderItem();
+            $orderItem->fill($data);
+            $orderItem->save();
+            return $orderItem;
+        });
+
+        return new JsonResponse($orderItem, Response::HTTP_CREATED);
     }
 
-    public function update(Request $request, OrderItem $orderItem)
+    /**
+     * @param Request $request
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function update(Request $request, string $id): JsonResponse
     {
-        $orderItem->update([
-            'order_id' => $request->order_id ?? $orderItem->order_id,
-            'inventory_item_id' => $request->inventory_item_id ?? $orderItem->inventory_item_id,
-            'quantity' => $request->quantity ?? $orderItem->quantity,
-        ]);
+        $item = OrderItem::find($id);
+        if (empty($item)) {
+            return response()->json(['message' => 'Order Item not found'], Response::HTTP_NOT_FOUND);
+        }
 
-        return response()->json($orderItem, 200);
+        $data = json_decode($request->getContent(), true);
+
+        if (isset($data['order_id'])) {
+            $item->order_id = $data['order_id'];
+        }
+        if (isset($data['inventory_item_id'])) {
+            $item->inventory_item_id = $data['inventory_item_id'];
+        }
+        if (isset($data['quantity'])) {
+            $item->quantity = $data['quantity'];
+        }
+        $item->save();
+
+        return new JsonResponse($item, Response::HTTP_OK);
     }
 
-    public function destroy(OrderItem $orderItem)
+    /**
+     * @param string $id
+     * @return JsonResponse
+     */
+    public function destroy(string $id): JsonResponse
     {
-        $orderItem->delete();
-        return response()->json(['message' => 'Позицію замовлення видалено'], 200);
+        $item = OrderItem::find($id);
+        if (empty($item)) {
+            return response()->json(['message' => 'Order Item not found'], Response::HTTP_NOT_FOUND);
+        }
+        $item->delete();
+        return new JsonResponse([], Response::HTTP_NOT_FOUND);
     }
 }
