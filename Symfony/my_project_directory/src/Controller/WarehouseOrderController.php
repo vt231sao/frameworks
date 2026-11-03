@@ -61,6 +61,10 @@ class WarehouseOrderController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
+        if (empty($data['customer_name'])) {
+            return $this->json(['message' => 'Field customer_name is required'], Response::HTTP_BAD_REQUEST);
+        }
+
         $order = new WarehouseOrder();
         $order->setCustomerName($data['customer_name']);
         if (isset($data['status'])) {
@@ -119,6 +123,6 @@ class WarehouseOrderController extends AbstractController
 
         $this->entityManager->remove($order);
         $this->entityManager->flush();
-        return $this->json([], Response::HTTP_NOT_FOUND);
+        return $this->json(['message' => 'Order deleted'], Response::HTTP_OK);
     }
 }

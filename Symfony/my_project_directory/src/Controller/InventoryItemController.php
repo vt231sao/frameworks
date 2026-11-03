@@ -63,6 +63,13 @@ class InventoryItemController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
+        if (empty($data['name']) || !isset($data['price']) || !isset($data['stock_quantity']) || !isset($data['category_id']) || !isset($data['supplier_id'])) {
+            return $this->json(
+                ['message' => 'Fields name, price, stock_quantity, category_id, supplier_id are required'],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
         $category = $this->entityManager->getRepository(Category::class)->findOneBy(['id' => $data['category_id']]);
         $supplier = $this->entityManager->getRepository(Supplier::class)->findOneBy(['id' => $data['supplier_id']]);
 
@@ -112,15 +119,17 @@ class InventoryItemController extends AbstractController
 
         if (isset($data['category_id'])) {
             $category = $this->entityManager->getRepository(Category::class)->findOneBy(['id' => $data['category_id']]);
-            if (!empty($category)) {
-                $item->setCategory($category);
+            if (empty($category)) {
+                return $this->json(['message' => 'Category not found'], Response::HTTP_NOT_FOUND);
             }
+            $item->setCategory($category);
         }
         if (isset($data['supplier_id'])) {
             $supplier = $this->entityManager->getRepository(Supplier::class)->findOneBy(['id' => $data['supplier_id']]);
-            if (!empty($supplier)) {
-                $item->setSupplier($supplier);
+            if (empty($supplier)) {
+                return $this->json(['message' => 'Supplier not found'], Response::HTTP_NOT_FOUND);
             }
+            $item->setSupplier($supplier);
         }
 
         $this->entityManager->flush();
@@ -143,6 +152,6 @@ class InventoryItemController extends AbstractController
 
         $this->entityManager->remove($item);
         $this->entityManager->flush();
-        return $this->json([], Response::HTTP_NOT_FOUND);
+        return $this->json(['message' => 'Item deleted'], Response::HTTP_OK);
     }
 }

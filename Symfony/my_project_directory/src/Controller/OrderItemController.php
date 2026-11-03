@@ -63,6 +63,13 @@ class OrderItemController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
+        if (!isset($data['quantity']) || !isset($data['order_id']) || !isset($data['inventory_item_id'])) {
+            return $this->json(
+                ['message' => 'Fields quantity, order_id, inventory_item_id are required'],
+                Response::HTTP_BAD_REQUEST
+            );
+        }
+
         $order = $this->entityManager->getRepository(WarehouseOrder::class)->findOneBy(['id' => $data['order_id']]);
         $inventoryItem = $this->entityManager->getRepository(InventoryItem::class)->findOneBy(['id' => $data['inventory_item_id']]);
 
@@ -122,6 +129,6 @@ class OrderItemController extends AbstractController
 
         $this->entityManager->remove($orderItem);
         $this->entityManager->flush();
-        return $this->json([], Response::HTTP_NOT_FOUND);
+        return $this->json(['message' => 'Order item deleted'], Response::HTTP_OK);
     }
 }

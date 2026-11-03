@@ -39,6 +39,10 @@ class CategoryController extends Controller
     {
         $data = json_decode($request->getContent(), true);
 
+        if (empty($data['name'])) {
+            return response()->json(['message' => 'Field name is required'], Response::HTTP_BAD_REQUEST);
+        }
+
         $category = DB::transaction(function () use ($data) {
             $category = new Category();
             $category->fill($data);
@@ -85,6 +89,6 @@ class CategoryController extends Controller
             return response()->json(['message' => 'Category not found'], Response::HTTP_NOT_FOUND);
         }
         $category->delete();
-        return new JsonResponse([], Response::HTTP_NOT_FOUND);
+        return response()->json(['message' => 'Category deleted'], Response::HTTP_OK);
     }
 }

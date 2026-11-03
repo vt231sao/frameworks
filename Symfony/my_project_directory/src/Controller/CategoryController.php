@@ -61,6 +61,10 @@ class CategoryController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
+        if (empty($data['name'])) {
+            return $this->json(['message' => 'Field name is required'], Response::HTTP_BAD_REQUEST);
+        }
+
         $category = new Category();
         $category->setName($data['name']);
         if (isset($data['description'])) {
@@ -117,6 +121,6 @@ class CategoryController extends AbstractController
 
         $this->entityManager->remove($category);
         $this->entityManager->flush();
-        return $this->json([], Response::HTTP_NOT_FOUND);
+        return $this->json(['message' => 'Category deleted'], Response::HTTP_OK);
     }
 }

@@ -61,6 +61,10 @@ class SupplierController extends AbstractController
     {
         $data = json_decode($request->getContent(), true);
 
+        if (empty($data['name']) || empty($data['contact_email'])) {
+            return $this->json(['message' => 'Fields name, contact_email are required'], Response::HTTP_BAD_REQUEST);
+        }
+
         $supplier = new Supplier();
         $supplier->setName($data['name']);
         $supplier->setContactEmail($data['contact_email']);
@@ -121,6 +125,6 @@ class SupplierController extends AbstractController
 
         $this->entityManager->remove($supplier);
         $this->entityManager->flush();
-        return $this->json([], Response::HTTP_NOT_FOUND);
+        return $this->json(['message' => 'Supplier deleted'], Response::HTTP_OK);
     }
 }

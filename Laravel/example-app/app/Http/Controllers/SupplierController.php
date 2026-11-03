@@ -39,6 +39,10 @@ class SupplierController extends Controller
     {
         $data = json_decode($request->getContent(), true);
 
+        if (empty($data['name']) || empty($data['contact_email'])) {
+            return response()->json(['message' => 'Fields name, contact_email are required'], Response::HTTP_BAD_REQUEST);
+        }
+
         $supplier = DB::transaction(function () use ($data) {
             $supplier = new Supplier();
             $supplier->fill($data);
@@ -88,6 +92,6 @@ class SupplierController extends Controller
             return response()->json(['message' => 'Supplier not found'], Response::HTTP_NOT_FOUND);
         }
         $supplier->delete();
-        return new JsonResponse([], Response::HTTP_NOT_FOUND);
+        return response()->json(['message' => 'Supplier deleted'], Response::HTTP_OK);
     }
 }

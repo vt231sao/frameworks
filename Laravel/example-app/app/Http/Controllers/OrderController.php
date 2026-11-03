@@ -39,6 +39,10 @@ class OrderController extends Controller
     {
         $data = json_decode($request->getContent(), true);
 
+        if (empty($data['customer_name'])) {
+            return response()->json(['message' => 'Field customer_name is required'], Response::HTTP_BAD_REQUEST);
+        }
+
         $order = DB::transaction(function () use ($data) {
             $order = new Order();
             $order->fill($data);
@@ -88,6 +92,6 @@ class OrderController extends Controller
             return response()->json(['message' => 'Order not found'], Response::HTTP_NOT_FOUND);
         }
         $order->delete();
-        return new JsonResponse([], Response::HTTP_NOT_FOUND);
+        return response()->json(['message' => 'Order deleted'], Response::HTTP_OK);
     }
 }
