@@ -10,11 +10,32 @@ use Symfony\Component\HttpFoundation\Response;
 class OrderController extends Controller
 {
     /**
+     * @param Request $request
      * @return JsonResponse
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $orders = Order::all();
+        $query = Order::query();
+
+        if ($request->filled('id')) {
+            $query->where('id', $request->query('id'));
+        }
+        if ($request->filled('customer_name')) {
+            $query->where('customer_name', 'like', '%' . $request->query('customer_name') . '%');
+        }
+        if ($request->filled('status')) {
+            $query->where('status', $request->query('status'));
+        }
+
+        $page = max(1, (int)$request->query('page', 1));
+        $itemsPerPage = max(1, (int)$request->query('itemsPerPage', 10));
+
+        $orders = $query
+            ->orderBy('id')
+            ->skip(($page - 1) * $itemsPerPage)
+            ->take($itemsPerPage)
+            ->get();
+
         return response()->json($orders, Response::HTTP_OK);
     }
 

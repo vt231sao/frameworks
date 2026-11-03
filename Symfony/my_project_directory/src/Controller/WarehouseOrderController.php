@@ -26,12 +26,15 @@ class WarehouseOrderController extends AbstractController
     }
 
     /**
+     * @param Request $request
      * @return JsonResponse
      */
     #[Route('', name: 'index', methods: ['GET'])]
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $orders = $this->entityManager->getRepository(WarehouseOrder::class)->findAll();
+        $queryParams = $request->query->all();
+
+        $orders = $this->entityManager->getRepository(WarehouseOrder::class)->getItems($queryParams);
         return $this->json($orders, Response::HTTP_OK);
     }
 

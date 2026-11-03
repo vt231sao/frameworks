@@ -3,41 +3,27 @@
 namespace App\Repository;
 
 use App\Entity\InventoryItem;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * @extends ServiceEntityRepository<InventoryItem>
+ * @extends AbstractFilterRepository<InventoryItem>
  */
-class InventoryItemRepository extends ServiceEntityRepository
+class InventoryItemRepository extends AbstractFilterRepository
 {
+    public const FIELDS = [
+        "id"             => ["field" => "id", "type" => "EQUAL"],
+        "name"           => ["field" => "name", "type" => "LIKE"],
+        "price"          => ["field" => "price", "type" => "BETWEEN"],
+        "stock_quantity" => ["field" => "stockQuantity", "type" => "BETWEEN"],
+        "category_id"    => ["field" => "category", "type" => "EQUAL"],
+        "supplier_id"    => ["field" => "supplier", "type" => "EQUAL"]
+    ];
+
+    /**
+     * @param ManagerRegistry $registry
+     */
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, InventoryItem::class);
     }
-
-//    /**
-//     * @return InventoryItem[] Returns an array of InventoryItem objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('i')
-//            ->andWhere('i.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('i.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
-
-//    public function findOneBySomeField($value): ?InventoryItem
-//    {
-//        return $this->createQueryBuilder('i')
-//            ->andWhere('i.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
 }

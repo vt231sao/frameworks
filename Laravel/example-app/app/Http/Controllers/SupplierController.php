@@ -10,11 +10,35 @@ use Symfony\Component\HttpFoundation\Response;
 class SupplierController extends Controller
 {
     /**
+     * @param Request $request
      * @return JsonResponse
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $suppliers = Supplier::all();
+        $query = Supplier::query();
+
+        if ($request->filled('id')) {
+            $query->where('id', $request->query('id'));
+        }
+        if ($request->filled('name')) {
+            $query->where('name', 'like', '%' . $request->query('name') . '%');
+        }
+        if ($request->filled('contact_email')) {
+            $query->where('contact_email', 'like', '%' . $request->query('contact_email') . '%');
+        }
+        if ($request->filled('phone')) {
+            $query->where('phone', 'like', '%' . $request->query('phone') . '%');
+        }
+
+        $page = max(1, (int)$request->query('page', 1));
+        $itemsPerPage = max(1, (int)$request->query('itemsPerPage', 10));
+
+        $suppliers = $query
+            ->orderBy('id')
+            ->skip(($page - 1) * $itemsPerPage)
+            ->take($itemsPerPage)
+            ->get();
+
         return response()->json($suppliers, Response::HTTP_OK);
     }
 

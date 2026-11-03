@@ -3,41 +3,25 @@
 namespace App\Repository;
 
 use App\Entity\Supplier;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
- * @extends ServiceEntityRepository<Supplier>
+ * @extends AbstractFilterRepository<Supplier>
  */
-class SupplierRepository extends ServiceEntityRepository
+class SupplierRepository extends AbstractFilterRepository
 {
+    public const FIELDS = [
+        "id"            => ["field" => "id", "type" => "EQUAL"],
+        "name"          => ["field" => "name", "type" => "LIKE"],
+        "contact_email" => ["field" => "contactEmail", "type" => "LIKE"],
+        "phone"         => ["field" => "phone", "type" => "LIKE"]
+    ];
+
+    /**
+     * @param ManagerRegistry $registry
+     */
     public function __construct(ManagerRegistry $registry)
     {
         parent::__construct($registry, Supplier::class);
     }
-
-//    /**
-//     * @return Supplier[] Returns an array of Supplier objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('s')
-//            ->andWhere('s.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('s.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
-
-//    public function findOneBySomeField($value): ?Supplier
-//    {
-//        return $this->createQueryBuilder('s')
-//            ->andWhere('s.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
 }

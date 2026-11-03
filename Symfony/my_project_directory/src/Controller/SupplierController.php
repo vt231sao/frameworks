@@ -26,12 +26,15 @@ class SupplierController extends AbstractController
     }
 
     /**
+     * @param Request $request
      * @return JsonResponse
      */
     #[Route('', name: 'index', methods: ['GET'])]
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $suppliers = $this->entityManager->getRepository(Supplier::class)->findAll();
+        $queryParams = $request->query->all();
+
+        $suppliers = $this->entityManager->getRepository(Supplier::class)->getItems($queryParams);
         return $this->json($suppliers, Response::HTTP_OK);
     }
 

@@ -26,12 +26,15 @@ class CategoryController extends AbstractController
     }
 
     /**
+     * @param Request $request
      * @return JsonResponse
      */
     #[Route('', name: 'index', methods: ['GET'])]
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $categories = $this->entityManager->getRepository(Category::class)->findAll();
+        $queryParams = $request->query->all();
+
+        $categories = $this->entityManager->getRepository(Category::class)->getItems($queryParams);
         return $this->json($categories, Response::HTTP_OK);
     }
 

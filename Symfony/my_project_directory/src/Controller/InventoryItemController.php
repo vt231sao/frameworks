@@ -28,12 +28,15 @@ class InventoryItemController extends AbstractController
     }
 
     /**
+     * @param Request $request
      * @return JsonResponse
      */
     #[Route('', name: 'index', methods: ['GET'])]
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $items = $this->entityManager->getRepository(InventoryItem::class)->findAll();
+        $queryParams = $request->query->all();
+
+        $items = $this->entityManager->getRepository(InventoryItem::class)->getItems($queryParams);
         return $this->json($items, Response::HTTP_OK);
     }
 

@@ -10,11 +10,32 @@ use Symfony\Component\HttpFoundation\Response;
 class CategoryController extends Controller
 {
     /**
+     * @param Request $request
      * @return JsonResponse
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $categories = Category::all();
+        $query = Category::query();
+
+        if ($request->filled('id')) {
+            $query->where('id', $request->query('id'));
+        }
+        if ($request->filled('name')) {
+            $query->where('name', 'like', '%' . $request->query('name') . '%');
+        }
+        if ($request->filled('description')) {
+            $query->where('description', 'like', '%' . $request->query('description') . '%');
+        }
+
+        $page = max(1, (int)$request->query('page', 1));
+        $itemsPerPage = max(1, (int)$request->query('itemsPerPage', 10));
+
+        $categories = $query
+            ->orderBy('id')
+            ->skip(($page - 1) * $itemsPerPage)
+            ->take($itemsPerPage)
+            ->get();
+
         return response()->json($categories, Response::HTTP_OK);
     }
 

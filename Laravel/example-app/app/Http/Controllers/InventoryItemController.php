@@ -12,11 +12,51 @@ use Symfony\Component\HttpFoundation\Response;
 class InventoryItemController extends Controller
 {
     /**
+     * @param Request $request
      * @return JsonResponse
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $items = InventoryItem::all();
+        $query = InventoryItem::query();
+
+        if ($request->filled('id')) {
+            $query->where('id', $request->query('id'));
+        }
+        if ($request->filled('name')) {
+            $query->where('name', 'like', '%' . $request->query('name') . '%');
+        }
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->query('category_id'));
+        }
+        if ($request->filled('supplier_id')) {
+            $query->where('supplier_id', $request->query('supplier_id'));
+        }
+
+        $price = $request->query('price', []);
+        if (isset($price['gte'])) {
+            $query->where('price', '>=', $price['gte']);
+        }
+        if (isset($price['lte'])) {
+            $query->where('price', '<=', $price['lte']);
+        }
+
+        $stockQuantity = $request->query('stock_quantity', []);
+        if (isset($stockQuantity['gte'])) {
+            $query->where('stock_quantity', '>=', $stockQuantity['gte']);
+        }
+        if (isset($stockQuantity['lte'])) {
+            $query->where('stock_quantity', '<=', $stockQuantity['lte']);
+        }
+
+        $page = max(1, (int)$request->query('page', 1));
+        $itemsPerPage = max(1, (int)$request->query('itemsPerPage', 10));
+
+        $items = $query
+            ->orderBy('id')
+            ->skip(($page - 1) * $itemsPerPage)
+            ->take($itemsPerPage)
+            ->get();
+
         return response()->json($items, Response::HTTP_OK);
     }
 

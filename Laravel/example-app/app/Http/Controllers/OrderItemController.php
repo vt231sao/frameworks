@@ -12,11 +12,40 @@ use Symfony\Component\HttpFoundation\Response;
 class OrderItemController extends Controller
 {
     /**
+     * @param Request $request
      * @return JsonResponse
      */
-    public function index(): JsonResponse
+    public function index(Request $request): JsonResponse
     {
-        $items = OrderItem::all();
+        $query = OrderItem::query();
+
+        if ($request->filled('id')) {
+            $query->where('id', $request->query('id'));
+        }
+        if ($request->filled('order_id')) {
+            $query->where('order_id', $request->query('order_id'));
+        }
+        if ($request->filled('inventory_item_id')) {
+            $query->where('inventory_item_id', $request->query('inventory_item_id'));
+        }
+
+        $quantity = $request->query('quantity', []);
+        if (isset($quantity['gte'])) {
+            $query->where('quantity', '>=', $quantity['gte']);
+        }
+        if (isset($quantity['lte'])) {
+            $query->where('quantity', '<=', $quantity['lte']);
+        }
+
+        $page = max(1, (int)$request->query('page', 1));
+        $itemsPerPage = max(1, (int)$request->query('itemsPerPage', 10));
+
+        $items = $query
+            ->orderBy('id')
+            ->skip(($page - 1) * $itemsPerPage)
+            ->take($itemsPerPage)
+            ->get();
+
         return response()->json($items, Response::HTTP_OK);
     }
 
